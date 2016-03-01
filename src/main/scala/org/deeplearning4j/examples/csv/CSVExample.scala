@@ -29,44 +29,48 @@ object CSVExample {
         val recordReader: RecordReader = new CSVRecordReader(0,",")
         recordReader.initialize(new FileSplit(new ClassPathResource("iris.txt").getFile))
         //reader,label index,number of possible labels
-        val iterator: DataSetIterator = new RecordReaderDataSetIterator(recordReader,4,3)
+        //val iterator: DataSetIterator = new RecordReaderDataSetIterator(recordReader,4,3)
         //get the dataset using the record reader. The datasetiterator handles vectorization
-        val next: DataSet = iterator.next()
+        
         // Customizing params
         Nd4j.MAX_SLICES_TO_PRINT = 10
         Nd4j.MAX_ELEMENTS_PER_SLICE = 10
 
         val numInputs = 4
         val outputNum = 3
-        val iterations = 3
+        val iterations = 1000
         val seed = 6L
-        val listenerFreq = iterations
+        val listenerFreq = 100
 
+        
+        val labelIndex = 4;
+        val numClasses = 3;
+        val batchSize = 150;    //Iris data set: 150 examples total. We are loading all of them into one DataSet (not recommended for large data sets)
+        val iterator = new RecordReaderDataSetIterator(recordReader,batchSize,labelIndex,numClasses);
+        val next: DataSet = iterator.next()
+        
 
         log.info("Build model....")
         val conf: MultiLayerConfiguration = new NeuralNetConfiguration.Builder()
                 .seed(seed)
                 .iterations(iterations)
-
-                .useDropConnect(true)
-                .learningRate(1e-3)
-                .l1(0.3).regularization(true).l2(1e-3)
-                .gradientNormalization(GradientNormalization.RenormalizeL2PerLayer)
+                .learningRate(0.1)
+                .regularization(true).l2(1e-4)
                 .list(3)
                 .layer(0, new DenseLayer.Builder().nIn(numInputs).nOut(3)
-                        .activation("relu").dropOut(0.5)
+                        .activation("tanh")
                         .weightInit(WeightInit.XAVIER)
                         .build())
-                .layer(1, new DenseLayer.Builder().nIn(3).nOut(2)
+                .layer(1, new DenseLayer.Builder().nIn(3).nOut(3)
                         .activation("tanh")
                         .weightInit(WeightInit.XAVIER)
                         .build())
                 .layer(2, new OutputLayer.Builder(LossFunctions.LossFunction.NEGATIVELOGLIKELIHOOD)
                         .weightInit(WeightInit.XAVIER)
                         .activation("softmax")
-                        .nIn(2).nOut(outputNum).build())
+                        .nIn(3).nOut(outputNum).build())
                 .backprop(true).pretrain(false)
-                .build()
+                .build();
 
         //run the model
         val model = new MultiLayerNetwork(conf)
@@ -76,7 +80,7 @@ object CSVExample {
         next.normalizeZeroMeanZeroUnitVariance()
         next.shuffle()
         //split test and train
-        val testAndTrain: SplitTestAndTrain = next.splitTestAndTrain(0.6)
+        val testAndTrain: SplitTestAndTrain = next.splitTestAndTrain(0.65)
         model.fit(testAndTrain.getTrain)
 
         //evaluate the model
