@@ -1,3 +1,6 @@
+Fork from https://github.com/kogecoo/dl4j-0.4-examples-scala , fix cvs code + eclipse plugin
+
+
 DL4J Release 0.4 Examples for Scala 
 =========================
 
